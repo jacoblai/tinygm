@@ -66,6 +66,15 @@ func main() {
 	router.POST(rootPath+"/wx/loginByWxInfo", eng.LoginByWxAndGetUserInfo)    // 登录
 	router.POST(rootPath+"/wx/getWxPhone", eng.TokenAuth(eng.WxGetUserPhone)) // 解微信手机号
 
+	router.GET(rootPath+"/once", eng.TokenAuth(eng.GetOnce)) //取防重复因子
+
+	router.POST(rootPath+"/add", eng.Add)
+	router.POST(rootPath+"/put", eng.Put)
+	router.POST(rootPath+"/patch", eng.Patch)
+	router.POST(rootPath+"/find", eng.Find)
+	router.POST(rootPath+"/findone", eng.FindById)
+	router.POST(rootPath+"/del", eng.Del)
+
 	srv := &http.Server{Handler: limit.Limit(cors.CORS(router)), ErrorLog: nil}
 	srv.Addr = *addr
 	if *addr == ":443" {

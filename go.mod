@@ -10,5 +10,6 @@ require (
 	github.com/jacoblai/yiyidb v1.4.6
 	github.com/medivhzhan/weapp/v2 v2.4.2
 	github.com/pquerna/ffjson v0.0.0-20190930134022-aa0246cd15f7
+	github.com/satori/go.uuid v1.2.0
 	go.mongodb.org/mongo-driver v1.7.1
 )

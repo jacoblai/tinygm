@@ -15,6 +15,7 @@ import (
 	"go.mongodb.org/mongo-driver/x/bsonx"
 	"log"
 	"runtime"
+	"sync"
 	"time"
 )
 
@@ -33,16 +34,20 @@ var (
 )
 
 type DbEngine struct {
-	MgEngine *mongo.Client //数据库引擎
-	validate *validator.Validate
-	TTlDb    *yiyidb.TtlRunner
-	TokenDb  *yiyidb.Kvdb //token引擎
-	Mdb      string
+	MgEngine    *mongo.Client //数据库引擎
+	validate    *validator.Validate
+	TTlDb       *yiyidb.TtlRunner
+	CacheDb     *yiyidb.Kvdb //缓存引擎
+	TokenDb     *yiyidb.Kvdb //token引擎
+	ipDenyDb    *yiyidb.Kvdb //ip限制刷单once库
+	ipDenyLocks *sync.Map
+	Mdb         string
 }
 
 func NewDbEngine() *DbEngine {
 	return &DbEngine{
-		validate: validator.New(),
+		validate:    validator.New(),
+		ipDenyLocks: &sync.Map{},
 	}
 }
 
@@ -55,6 +60,16 @@ func (d *DbEngine) Open(dir, mg, mdb string) error {
 	}
 	d.TTlDb = ttldb
 
+	cacheDb, err := yiyidb.OpenKvdb(dir+"/cache.db", 52)
+	if err != nil {
+		return err
+	}
+	err = cacheDb.RegTTl("cache.db", d.TTlDb)
+	if err != nil {
+		return err
+	}
+	d.CacheDb = cacheDb
+
 	tokenDb, err := yiyidb.OpenKvdb(dir+"/token.db", 24)
 	if err != nil {
 		return err
@@ -64,6 +79,16 @@ func (d *DbEngine) Open(dir, mg, mdb string) error {
 		return err
 	}
 	d.TokenDb = tokenDb
+
+	ipDenyDb, err := yiyidb.OpenKvdb(dir+"/ipdeny.db", 36)
+	if err != nil {
+		return err
+	}
+	err = ipDenyDb.RegTTl("ipdeny.db", d.TTlDb)
+	if err != nil {
+		return err
+	}
+	d.ipDenyDb = ipDenyDb
 
 	ops := options.Client().ApplyURI(mg)
 	p := uint64(runtime.NumCPU() * 2)
