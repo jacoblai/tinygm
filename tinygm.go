@@ -72,7 +72,7 @@ func main() {
 	router.POST(rootPath+"/put", eng.Put)
 	router.POST(rootPath+"/patch", eng.Patch)
 	router.POST(rootPath+"/find", eng.Find)
-	router.POST(rootPath+"/findone", eng.FindById)
+	router.POST(rootPath+"/findid", eng.FindById)
 	router.POST(rootPath+"/del", eng.Del)
 
 	srv := &http.Server{Handler: limit.Limit(cors.CORS(router)), ErrorLog: nil}

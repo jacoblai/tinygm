@@ -107,15 +107,15 @@ func (d *DbEngine) Put(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 	}
 
 	obj["UpdateDate"] = time.Now().Local()
-	put := d.GetColl(collName).FindOneAndUpdate(context.Background(), bson.M{"_id": id}, bson.M{"$set": obj})
-	if put.Err() != nil {
-		resultor.RetErr(w, put.Err().Error())
+	put, err := d.GetColl(collName).UpdateMany(context.Background(), bson.M{"_id": id}, obj)
+	if err != nil {
+		resultor.RetErr(w, err.Error())
 		return
 	}
-	resultor.RetOk(w, "操作成功", 1)
+	resultor.RetOk(w, "操作成功", int(put.ModifiedCount))
 }
 
-//条件修改
+//部分修改
 
 func (d *DbEngine) Patch(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	defer r.Body.Close()
