@@ -10,7 +10,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"io/ioutil"
 	"net/http"
-	"time"
 )
 
 //新增
@@ -87,12 +86,6 @@ func (d *DbEngine) Put(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 		return
 	}
 
-	id, err := primitive.ObjectIDFromHex(ps.ByName("id"))
-	if err != nil {
-		resultor.RetErr(w, "1003")
-		return
-	}
-
 	collName := r.URL.Query().Get("cn")
 	if collName == "" {
 		resultor.RetErr(w, "集合名为空")
@@ -106,13 +99,24 @@ func (d *DbEngine) Put(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 		return
 	}
 
-	obj["UpdateDate"] = time.Now().Local()
-	put, err := d.GetColl(collName).UpdateMany(context.Background(), bson.M{"_id": id}, obj)
+	filter, ok := obj["filter"].(map[string]interface{})
+	if !ok {
+		resultor.RetErr(w, "filter invalidate")
+		return
+	}
+
+	update, ok := obj["update"].(map[string]interface{})
+	if !ok {
+		resultor.RetErr(w, "update invalidate")
+		return
+	}
+
+	res, err := d.GetColl(collName).UpdateMany(context.Background(), filter, update)
 	if err != nil {
 		resultor.RetErr(w, err.Error())
 		return
 	}
-	resultor.RetOk(w, "操作成功", int(put.ModifiedCount))
+	resultor.RetOk(w, res, int(res.ModifiedCount))
 }
 
 //部分修改
@@ -159,13 +163,12 @@ func (d *DbEngine) Patch(w http.ResponseWriter, r *http.Request, ps httprouter.P
 		return
 	}
 
-	obj["UpdateDate"] = time.Now().Local()
 	res, err := d.GetColl(collName).UpdateMany(context.Background(), filter, bson.M{"$set": update})
 	if err != nil {
 		resultor.RetErr(w, err.Error())
 		return
 	}
-	resultor.RetOk(w, res, 1)
+	resultor.RetOk(w, res, int(res.ModifiedCount))
 }
 
 //获取
@@ -205,13 +208,13 @@ func (d *DbEngine) Find(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 		resultor.RetErr(w, err.Error())
 		return
 	}
-	result := make([]map[string]interface{}, 0)
-	err = data.All(context.Background(), &result)
+	res := make([]map[string]interface{}, 0)
+	err = data.All(context.Background(), &res)
 	if err != nil {
 		resultor.RetErr(w, err.Error())
 		return
 	}
-	resultor.RetOk(w, result, len(result))
+	resultor.RetOk(w, res, len(res))
 }
 
 //获取某个
@@ -280,10 +283,10 @@ func (d *DbEngine) Del(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 		return
 	}
 
-	del, err := d.GetColl(collName).DeleteMany(context.Background(), filter)
+	res, err := d.GetColl(collName).DeleteMany(context.Background(), filter)
 	if err != nil {
 		resultor.RetErr(w, err.Error())
 		return
 	}
-	resultor.RetOk(w, "操作成功", int(del.DeletedCount))
+	resultor.RetOk(w, res, int(res.DeletedCount))
 }
